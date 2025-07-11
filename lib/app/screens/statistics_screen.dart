@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:qadam_app/app/services/coin_service.dart';
 import '../services/statistics_service.dart';
 import '../services/auth_service.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -83,6 +84,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
     if (todayStats == null) {
       // Fallback: StepCounterService'dan lokal qadamlarni ko'rsatish
       final stepService = Provider.of<StepCounterService>(context);
+      final coinService = Provider.of<CoinService>(context);
       return SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -107,7 +109,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                           color: Theme.of(context).primaryColor),
                       _buildStatItem(context,
                           icon: Icons.monetization_on,
-                          value: '+0',
+                          value: '+${coinService.todayEarned}',
                           label: 'Tanga',
                           color: const Color(0xFFFFC107)),
                     ],
@@ -179,58 +181,182 @@ class _StatisticsScreenState extends State<StatisticsScreen>
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        SizedBox(
-          height: 220,
-          child: BarChart(
-            BarChartData(
-              alignment: BarChartAlignment.spaceAround,
-              maxY: stats
-                      .map((e) => e.steps)
-                      .reduce((a, b) => a > b ? a : b)
-                      .toDouble() *
-                  1.2,
-              barTouchData: BarTouchData(enabled: true),
-              titlesData: FlTitlesData(
-                leftTitles: AxisTitles(
-                  sideTitles: SideTitles(showTitles: true, reservedSize: 32),
-                ),
-                bottomTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    getTitlesWidget: (double value, TitleMeta meta) {
-                      final idx = value.toInt();
-                      if (idx < 0 || idx >= stats.length)
-                        return const SizedBox();
-                      return Padding(
-                        padding: const EdgeInsets.only(top: 8.0),
-                        child: Text(stats[idx].day.substring(0, 2)),
-                      );
-                    },
-                    reservedSize: 28,
-                  ),
-                ),
-                rightTitles:
-                    AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                topTitles:
-                    AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.07),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
               ),
-              borderData: FlBorderData(show: false),
-              barGroups: [
-                for (int i = 0; i < stats.length; i++)
-                  BarChartGroupData(
-                    x: i,
-                    barRods: [
-                      BarChartRodData(
-                        toY: stats[i].steps.toDouble(),
-                        color: Theme.of(context).primaryColor,
-                        width: 18,
-                        borderRadius: BorderRadius.circular(6),
+            ],
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+          margin: const EdgeInsets.only(bottom: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Haftalik Qadamlar Grafigi",
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).primaryColor,
+                    ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 180,
+                child: BarChart(
+                  BarChartData(
+                    alignment: BarChartAlignment.spaceAround,
+                    maxY: stats.isNotEmpty
+                        ? (stats
+                                .map((e) => e.steps)
+                                .reduce((a, b) => a > b ? a : b)
+                                .toDouble() *
+                            1.2)
+                        : 1000,
+                    barTouchData: BarTouchData(
+                      enabled: true,
+                      touchTooltipData: BarTouchTooltipData(
+                        // tooltipBgColor: Theme.of(context).primaryColor.withOpacity(0.9),
+                        getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                          final stat = stats[group.x.toInt()];
+                          return BarTooltipItem(
+                            '${stat.day}\n',
+                            const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                            children: [
+                              TextSpan(
+                                text: 'Qadam: ${stat.steps}',
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontWeight: FontWeight.normal,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          );
+                        },
                       ),
+                    ),
+                    titlesData: FlTitlesData(
+                      leftTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          reservedSize: 36,
+                          getTitlesWidget: (value, meta) {
+                            if (value == 0) return const Text('0');
+                            if (stats.isEmpty) return const SizedBox();
+                            // Show only 2-3 labels for clarity
+                            final max = stats
+                                .map((e) => e.steps)
+                                .reduce((a, b) => a > b ? a : b);
+                            if (value == max * 1.2) {
+                              return Text('${(max * 1.2).toInt()}');
+                            }
+                            if (value == (max / 2).roundToDouble()) {
+                              return Text('${(max / 2).toInt()}');
+                            }
+                            return const SizedBox();
+                          },
+                        ),
+                      ),
+                      bottomTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          getTitlesWidget: (double value, TitleMeta meta) {
+                            final idx = value.toInt();
+                            if (idx < 0 || idx >= stats.length) {
+                              return const SizedBox();
+                            }
+                            final day = stats[idx].day;
+                            final label =
+                                (day.length >= 2) ? day.substring(0, 2) : day;
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 8.0),
+                              child: Text(
+                                label,
+                                style: TextStyle(
+                                  color: Theme.of(context).primaryColor,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            );
+                          },
+                          reservedSize: 32,
+                        ),
+                      ),
+                      rightTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
+                      topTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
+                    ),
+                    borderData: FlBorderData(
+                      show: true,
+                      border: Border(
+                        left: BorderSide(
+                          color: Theme.of(context).dividerColor,
+                          width: 1,
+                        ),
+                        bottom: BorderSide(
+                          color: Theme.of(context).dividerColor,
+                          width: 1,
+                        ),
+                      ),
+                    ),
+                    barGroups: [
+                      for (int i = 0; i < stats.length; i++)
+                        BarChartGroupData(
+                          x: i,
+                          barRods: [
+                            BarChartRodData(
+                              toY: stats[i].steps.toDouble(),
+                              color: i == stats.length - 1
+                                  ? Colors.greenAccent.shade400
+                                  : Theme.of(context).primaryColor,
+                              width: 20,
+                              borderRadius: BorderRadius.circular(8),
+                              gradient: LinearGradient(
+                                colors: [
+                                  Theme.of(context)
+                                      .primaryColor
+                                      .withOpacity(0.8),
+                                  Theme.of(context)
+                                      .primaryColor
+                                      .withOpacity(0.4),
+                                ],
+                                begin: Alignment.bottomCenter,
+                                end: Alignment.topCenter,
+                              ),
+                              borderSide: BorderSide(
+                                color: Colors.white.withOpacity(0.7),
+                                width: 1.5,
+                              ),
+                            ),
+                          ],
+                        ),
                     ],
+                    gridData: FlGridData(
+                      show: true,
+                      drawVerticalLine: false,
+                      getDrawingHorizontalLine: (value) => FlLine(
+                        color: Theme.of(context).dividerColor.withOpacity(0.2),
+                        strokeWidth: 1,
+                        dashArray: [4, 4],
+                      ),
+                    ),
                   ),
-              ],
-              gridData: FlGridData(show: false),
-            ),
+                ),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 20),

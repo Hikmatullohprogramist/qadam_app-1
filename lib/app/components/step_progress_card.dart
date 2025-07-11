@@ -16,7 +16,7 @@ class StepProgressCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final double progressPercent = steps / goal;
     final cappedProgress = progressPercent > 1.0 ? 1.0 : progressPercent;
-    
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -123,7 +123,7 @@ class StepProgressCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '0',
+                steps.toString(),
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               Text(
@@ -150,4 +150,4 @@ class StepProgressCard extends StatelessWidget {
       ),
     );
   }
-} 
+}

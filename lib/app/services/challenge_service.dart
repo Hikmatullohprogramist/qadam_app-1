@@ -465,6 +465,16 @@ class ChallengeService extends ChangeNotifier {
   void addTestSteps(int steps) {
     // Implementation of addTestSteps method
   }
+
+  Future<void> leaveChallenge(String challengeId) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    await FirebaseFirestore.instance
+        .collection('user_challenges')
+        .doc('${user.uid}_$challengeId')
+        .delete();
+    notifyListeners();
+  }
 }
 
 class MyBannerAdWidget extends StatefulWidget {

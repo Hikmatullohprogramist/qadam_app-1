@@ -139,10 +139,17 @@ class CoinService extends ChangeNotifier {
   // Add coins based on steps - called when steps are updated
   Future<int> addCoinsFromSteps(int steps) async {
     if (_todayEarned >= _dailyCoinLimit) {
+      print('Daily limit reached');
+
       return 0; // Daily limit reached
     }
 
     int earnedCoins = (steps / _stepsPerCoin).floor();
+
+    print('Steps: $steps');
+    print('Earned coins: $earnedCoins');
+    print('Today earned: $_todayEarned');
+    print('Daily limit: $_dailyCoinLimit');
 
     // Cap to daily limit
     if (_todayEarned + earnedCoins > _dailyCoinLimit) {

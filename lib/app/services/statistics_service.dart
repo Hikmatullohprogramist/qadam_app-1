@@ -46,7 +46,7 @@ class StatisticsService extends ChangeNotifier {
               coins = int.tryParse(data['coins']) ?? 0;
             }
             return DailyStats(
-              day: data['day'] ?? '',
+              day: data['day'].toString() ?? '',
               steps: steps,
               coins: coins,
             );

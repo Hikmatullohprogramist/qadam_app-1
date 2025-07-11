@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:pedometer/pedometer.dart';
+import 'package:qadam_app/app/services/coin_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -11,6 +12,7 @@ class StepCounterService extends ChangeNotifier {
   String _status = 'stopped';
   Stream<StepCount>? _stepCountStream;
   late SharedPreferences _prefs;
+  late CoinService _coinService;
 
   StepCounterService() {
     _initPrefs();
@@ -22,6 +24,7 @@ class StepCounterService extends ChangeNotifier {
 
   Future<void> _initPrefs() async {
     _prefs = await SharedPreferences.getInstance();
+    _coinService = CoinService();
     _loadSteps();
     _loadGoal();
     _checkForDailyReset();
@@ -98,6 +101,7 @@ class StepCounterService extends ChangeNotifier {
     _saveSteps();
     syncStepsWithFirestore();
     await _updateAllChallengeProgress();
+    await _coinService.addCoinsFromSteps(_steps);
     notifyListeners();
   }
 
@@ -108,10 +112,12 @@ class StepCounterService extends ChangeNotifier {
   }
 
   // For testing or manual entry
-  void addSteps(int count) {
+  void addSteps(int count) async {
     _steps += count;
     _saveSteps();
     syncStepsWithFirestore();
+    await _coinService.addCoinsFromSteps(_steps);
+
     notifyListeners();
   }
 
